@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AudioMark — Invisible Watermarking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300&family=DM+Mono:wght@300;400;500&family=Outfit:wght@200;300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:#0d0d0d;--ink2:#1a1a1a;--ink3:#2e2e2e;--dim:#6b6b6b;
+  --rule:#e0dcd4;--paper:#f5f2ec;--cream:#faf8f4;
+  --gold:#b8924a;--gold2:#d4a95a;--glow:#c9a46a;
+  --red:#8b2b2b;--green:#2b6b3a;
+  --r:6px;--shadow:0 2px 24px rgba(13,13,13,0.10);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'Outfit',sans-serif;font-weight:300;background:var(--cream);color:var(--ink);min-height:100vh;overflow-x:hidden;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");pointer-events:none;z-index:0;}
+header{position:sticky;top:0;border-bottom:1px solid var(--rule);padding:22px 48px;display:flex;align-items:center;justify-content:space-between;background:rgba(245,242,236,0.95);backdrop-filter:blur(12px);z-index:100;}
+.logo{display:flex;align-items:baseline;gap:10px;}
+.logo-mark{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:600;letter-spacing:-0.5px;color:var(--ink);}
+.logo-mark span{color:var(--gold);}
+.logo-sub{font-family:'DM Mono',monospace;font-size:10px;font-weight:300;color:var(--dim);letter-spacing:2px;text-transform:uppercase;}
+.header-right{display:flex;align-items:center;gap:12px;}
+.server-status{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1px;padding:5px 12px;border-radius:20px;border:1px solid var(--rule);color:var(--dim);display:flex;align-items:center;gap:6px;transition:all 0.3s;}
+.server-status.online{border-color:rgba(43,107,58,0.4);color:var(--green);background:rgba(43,107,58,0.05);}
+.server-status.offline{border-color:rgba(139,43,43,0.4);color:var(--red);background:rgba(139,43,43,0.05);}
+.status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;}
+.header-badge{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:1.5px;text-transform:uppercase;border:1px solid var(--rule);padding:5px 12px;border-radius:20px;}
+.hero{position:relative;padding:80px 48px 60px;max-width:900px;margin:0 auto;text-align:center;z-index:1;}
+.hero-eyebrow{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:3px;text-transform:uppercase;color:var(--gold);margin-bottom:20px;display:inline-flex;align-items:center;gap:10px;}
+.hero-eyebrow::before,.hero-eyebrow::after{content:'';width:32px;height:1px;background:var(--gold);opacity:0.6;}
+.hero h1{font-family:'Cormorant Garamond',serif;font-size:clamp(40px,7vw,72px);font-weight:300;line-height:1.08;letter-spacing:-1px;color:var(--ink);margin-bottom:24px;}
+.hero h1 em{font-style:italic;color:var(--gold);}
+.hero-desc{font-size:15px;font-weight:300;color:var(--dim);line-height:1.7;max-width:520px;margin:0 auto 48px;}
+.tabs{display:inline-flex;border:1px solid var(--rule);border-radius:40px;padding:4px;background:var(--paper);gap:2px;box-shadow:var(--shadow);margin-bottom:56px;}
+.tab-btn{font-family:'Outfit',sans-serif;font-size:13px;font-weight:400;letter-spacing:0.3px;padding:10px 28px;border:none;border-radius:32px;cursor:pointer;background:transparent;color:var(--dim);transition:all 0.25s ease;}
+.tab-btn.active{background:var(--ink);color:var(--cream);box-shadow:0 2px 12px rgba(13,13,13,0.2);}
+.section{display:none;}.section.active{display:block;}
+.main{max-width:1100px;margin:0 auto;padding:0 48px 80px;position:relative;z-index:1;}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:12px;overflow:hidden;box-shadow:var(--shadow);margin-bottom:20px;animation:fadeUp 0.4s ease both;}
+.card:nth-child(2){animation-delay:0.05s;}.card:nth-child(3){animation-delay:0.10s;}
+.card-head{padding:20px 28px 18px;border-bottom:1px solid var(--rule);display:flex;align-items:center;gap:12px;}
+.card-num{font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600;color:var(--gold);min-width:22px;}
+.card-title{font-size:13px;font-weight:500;letter-spacing:0.3px;color:var(--ink2);}
+.card-body{padding:24px 28px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.drop-zone{border:1.5px dashed var(--rule);border-radius:var(--r);padding:32px 20px;text-align:center;cursor:pointer;transition:all 0.2s ease;background:rgba(255,255,255,0.5);position:relative;}
+.drop-zone:hover,.drop-zone.drag-over{border-color:var(--gold);background:rgba(184,146,74,0.04);}
+.drop-zone input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{width:40px;height:40px;margin:0 auto 12px;color:var(--dim);opacity:0.5;}
+.drop-label{font-size:13px;font-weight:400;color:var(--ink3);margin-bottom:4px;}
+.drop-hint{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:0.5px;}
+.file-name{font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);margin-top:10px;font-weight:500;word-break:break-all;}
+.img-preview{width:80px;height:80px;object-fit:contain;border-radius:4px;border:1px solid var(--rule);margin-top:12px;display:none;}
+.field label{display:block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:8px;}
+.field input{width:100%;padding:11px 14px;border:1px solid var(--rule);border-radius:var(--r);background:rgba(255,255,255,0.7);font-family:'Outfit',sans-serif;font-size:14px;font-weight:300;color:var(--ink);outline:none;transition:border-color 0.2s;}
+.field input:focus{border-color:var(--gold);background:#fff;}
+.field input[type="password"]{font-family:'DM Mono',monospace;letter-spacing:2px;}
+.size-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}
+.size-opt{border:1px solid var(--rule);border-radius:var(--r);padding:10px 8px;text-align:center;cursor:pointer;background:rgba(255,255,255,0.5);transition:all 0.2s;font-size:13px;font-weight:400;color:var(--ink3);user-select:none;}
+.size-opt:hover{border-color:var(--gold);color:var(--ink);}
+.size-opt.selected{background:var(--ink);border-color:var(--ink);color:var(--cream);}
+.size-opt .size-px{display:block;font-family:'DM Mono',monospace;font-size:9px;margin-top:2px;opacity:0.6;}
+.run-wrap{margin-top:28px;text-align:center;}
+.run-btn{display:inline-flex;align-items:center;gap:10px;padding:15px 44px;background:var(--ink);color:var(--cream);border:none;border-radius:40px;font-family:'Outfit',sans-serif;font-size:14px;font-weight:400;letter-spacing:0.4px;cursor:pointer;transition:all 0.25s ease;box-shadow:0 4px 20px rgba(13,13,13,0.15);position:relative;overflow:hidden;}
+.run-btn::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,var(--gold) 0%,transparent 60%);opacity:0;transition:opacity 0.3s;}
+.run-btn:hover::before{opacity:0.12;}
+.run-btn:hover{transform:translateY(-2px);box-shadow:0 8px 32px rgba(13,13,13,0.2);}
+.run-btn:active{transform:translateY(0);}
+.run-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+.btn-icon{width:16px;height:16px;flex-shrink:0;}
+.progress-wrap{margin-top:24px;display:none;}
+.progress-track{height:3px;background:var(--rule);border-radius:2px;overflow:hidden;margin-bottom:10px;}
+.progress-bar{height:100%;background:linear-gradient(90deg,var(--gold),var(--gold2));border-radius:2px;width:0%;transition:width 0.6s ease;}
+.progress-label{font-family:'DM Mono',monospace;font-size:11px;color:var(--dim);letter-spacing:0.5px;}
+.log-wrap{margin-top:24px;display:none;}
+.log-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.log-title{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);}
+.log-dots{display:flex;gap:5px;}
+.log-dot{width:8px;height:8px;border-radius:50%;background:var(--rule);}
+.log-dot:nth-child(1){background:#e5534b;}.log-dot:nth-child(2){background:#e9a839;}.log-dot:nth-child(3){background:#57a555;}
+.log-box{background:var(--ink2);border-radius:var(--r);padding:18px 20px;max-height:220px;overflow-y:auto;font-family:'DM Mono',monospace;font-size:12px;line-height:1.7;color:#c9c5bc;}
+.log-box::-webkit-scrollbar{width:4px;}.log-box::-webkit-scrollbar-track{background:transparent;}.log-box::-webkit-scrollbar-thumb{background:#3a3a3a;border-radius:2px;}
+.log-line{display:block;white-space:pre-wrap;word-break:break-all;}
+.log-ok{color:#7ec87e;}.log-err{color:#e5534b;}.log-info{color:var(--glow);}.log-dim{color:#5a5a5a;}
+.result-card{margin-top:24px;border:1px solid var(--rule);border-radius:10px;overflow:hidden;display:none;}
+.result-head{background:var(--ink);padding:14px 20px;display:flex;align-items:center;gap:10px;}
+.result-head-icon{width:18px;height:18px;color:var(--gold2);flex-shrink:0;}
+.result-head span{font-size:13px;font-weight:400;color:var(--cream);letter-spacing:0.3px;}
+.result-body{padding:20px;background:rgba(255,255,255,0.5);}
+.dl-btn{display:inline-flex;align-items:center;gap:8px;padding:12px 28px;background:var(--ink);color:var(--cream);border:none;border-radius:24px;font-family:'Outfit',sans-serif;font-size:13px;font-weight:400;cursor:pointer;text-decoration:none;transition:all 0.2s;}
+.dl-btn:hover{background:var(--gold);color:var(--ink);}
+.dl-btn svg{width:14px;height:14px;}
+.extracted-logo-wrap{display:flex;align-items:flex-start;gap:24px;flex-wrap:wrap;}
+.extracted-logo-frame{border:1px solid var(--rule);border-radius:var(--r);padding:10px;background:#fff;display:inline-block;box-shadow:var(--shadow);}
+.extracted-logo-frame img{display:block;max-width:200px;image-rendering:pixelated;border-radius:2px;}
+.info-band{background:var(--paper);border:1px solid var(--rule);border-radius:10px;padding:20px 28px;margin-bottom:20px;display:grid;grid-template-columns:repeat(4,1fr);gap:20px;}
+.info-item{text-align:center;}
+.info-val{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:600;color:var(--gold);display:block;line-height:1.1;margin-bottom:4px;}
+.info-key{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);}
+.divider{height:1px;background:var(--rule);margin:32px 0;}
+.technique-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:20px;}
+.tech-card{border:1px solid var(--rule);border-radius:var(--r);padding:18px;background:rgba(255,255,255,0.5);}
+.tech-letter{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:600;color:var(--gold);opacity:0.6;line-height:1;margin-bottom:8px;}
+.tech-name{font-size:12px;font-weight:500;color:var(--ink2);margin-bottom:6px;}
+.tech-desc{font-size:12px;font-weight:300;color:var(--dim);line-height:1.6;}
+.setup-box{background:var(--ink2);border-radius:10px;padding:24px 28px;margin-bottom:20px;}
+.analysis-frame{border:1px solid var(--rule);border-radius:var(--r);overflow:hidden;background:#fff;margin-top:20px;padding:0;box-shadow:0 2px 8px rgba(13,13,13,0.08);}
+.analysis-img{width:100%;height:auto;display:block;}
+.setup-box h3{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--gold);margin-bottom:14px;}
+.setup-box pre{font-family:'DM Mono',monospace;font-size:12px;color:#c9c5bc;line-height:1.8;white-space:pre-wrap;}
+.setup-box code{color:#7ec87e;}
+footer{border-top:1px solid var(--rule);padding:28px 48px;display:flex;align-items:center;justify-content:space-between;margin-top:40px;position:relative;z-index:1;}
+.footer-copy{font-family:'DM Mono',monospace;font-size:10px;color:var(--dim);letter-spacing:0.5px;}
+.footer-tech{display:flex;gap:16px;}
+.footer-pill{font-family:'DM Mono',monospace;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:var(--dim);border:1px solid var(--rule);padding:4px 10px;border-radius:10px;}
+@keyframes spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.spinning{animation:spin 1.2s linear infinite;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);}}
+canvas#waveform{width:100%;height:50px;border-radius:var(--r);background:var(--ink2);display:none;margin-top:12px;}
+@media(max-width:768px){header{padding:20px 24px;}.hero{padding:48px 24px 40px;}.main{padding:0 24px 60px;}.grid-2,.info-band,.technique-grid{grid-template-columns:1fr;}.size-grid{grid-template-columns:repeat(3,1fr);}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-mark">Audio<span>Mark</span></div>
+    <div class="logo-sub">Invisible Watermarking</div>
+  </div>
+  <div class="header-right">
+    <div class="server-status" id="server-status">
+      <div class="status-dot"></div>
+      <span id="status-text">Checking server…</span>
+    </div>
+    <div class="header-badge">DWT · QIM · Reed-Solomon · ChaCha20</div>
+  </div>
+</header>
+
+<div class="hero">
+  <div class="hero-eyebrow">Cryptographic Audio Watermarking</div>
+  <h1>Embed. Protect.<br><em>Prove ownership.</em></h1>
+  <p class="hero-desc">
+    Hide an encrypted logo invisibly inside any audio file using DWT-based
+    Quantisation Index Modulation with Reed-Solomon error correction.
+  </p>
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('embed')">Embed Watermark</button>
+    <button class="tab-btn" onclick="switchTab('extract')">Extract Watermark</button>
+
+  </div>
+</div>
+
+<main class="main">
+
+<!-- ══ SETUP TAB ══ -->
+<div id="setup-section" class="section">
+  <div class="setup-box">
+    <h3>Quick Start</h3>
+    <pre>
+<code># 1. Install dependencies</code>
+pip install flask flask-cors reedsolo pydub pywavelets numpy Pillow cryptography matplotlib
+
+<code># 2. Place all four files in the same folder:</code>
+  app.py        ← Flask backend
+  index.html    ← this page
+  embed.py     ← your existing embed
+  extract.py   ← your existing extract
+
+<code># 3. Start the server</code>
+python app.py
+
+<code># 4. Open in browser</code>
+http://localhost:5000
+    </pre>
+  </div>
+  <div class="setup-box" style="margin-top:16px;">
+    <h3>How it works</h3>
+    <pre>
+Browser  ──POST /embed──►  app.py  ──calls──►  embed.embed()
+                                                    │
+                                              embed.py (unchanged)
+                                                    │
+         ◄── watermarked audio ──────────────────────┘
+
+Browser  ──POST /extract──►  app.py  ──calls──►  extract.extract()
+                                                      │
+                                              extract.py (unchanged)
+                                                      │
+         ◄── recovered logo ────────────────────────────┘
+    </pre>
+  </div>
+</div>
+
+<!-- ══ EMBED TAB ══ -->
+<div id="embed-section" class="section active">
+  <div class="card">
+    <div class="card-head"><span class="card-num">01</span><span class="card-title">Upload Files</span></div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div>
+          <div class="drop-zone" id="wav-drop" ondragover="handleDrag(event)" ondragleave="handleDragLeave(event,'wav-drop')" ondrop="handleDrop(event,'wav-input','wav-drop')">
+            <input type="file" id="wav-input" accept=".wav" onchange="handleWavFile(this)">
+            <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+            <p class="drop-label">Drop WAV audio here</p>
+            <p class="drop-hint">Input audio file · .wav only</p>
+            <div id="wav-name" class="file-name"></div>
+            <canvas id="waveform"></canvas>
+          </div>
+        </div>
+        <div>
+          <div class="drop-zone" id="logo-drop" ondragover="handleDrag(event)" ondragleave="handleDragLeave(event,'logo-drop')" ondrop="handleDrop(event,'logo-input','logo-drop')">
+            <input type="file" id="logo-input" accept="image/*" onchange="handleLogoFile(this)">
+            <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+            <p class="drop-label">Drop logo image here</p>
+            <p class="drop-hint">PNG · JPG · BMP</p>
+            <div id="logo-name" class="file-name"></div>
+            <img id="logo-preview" class="img-preview">
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-num">02</span><span class="card-title">Configure Embedding</span></div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div class="field"><label>Encryption Password</label><input type="password" id="embed-pass" placeholder="Enter a strong password" autocomplete="new-password"></div>
+        <div class="field"><label>Output Filename</label><input type="text" id="embed-out" value="watermarked.mp3" placeholder="watermarked.mp3"></div>
+      </div>
+      <div style="margin-top:20px;">
+        <label style="display:block;font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;">Logo Embed Size</label>
+        <div class="size-grid">
+          <div class="size-opt" onclick="selectSize(32,32,this)">32 × 32<span class="size-px">~9s audio min</span></div>
+          <div class="size-opt selected" onclick="selectSize(64,64,this)">64 × 64<span class="size-px">~36s audio min</span></div>
+          <div class="size-opt" onclick="selectSize(128,128,this)">128 × 128<span class="size-px">~144s audio min</span></div>
+        </div>
+      </div>
+      <input type="hidden" id="logo-w" value="64">
+      <input type="hidden" id="logo-h" value="64">
+    </div>
+  </div>
+
+  <div class="run-wrap">
+    <button class="run-btn" id="embed-btn" onclick="runEmbed()">
+      <svg class="btn-icon" id="embed-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+      Embed Watermark
+    </button>
+  </div>
+
+  <div class="progress-wrap" id="embed-progress">
+    <div class="progress-track"><div class="progress-bar" id="embed-bar"></div></div>
+    <div class="progress-label" id="embed-progress-label">Sending to Python backend…</div>
+  </div>
+  <div class="log-wrap" id="embed-log-wrap">
+    <div class="log-header"><span class="log-title">Process Log</span><div class="log-dots"><div class="log-dot"></div><div class="log-dot"></div><div class="log-dot"></div></div></div>
+    <div class="log-box" id="embed-log"></div>
+  </div>
+
+  <div class="result-card" id="embed-result">
+    <div class="result-head">
+      <svg class="result-head-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span>Embedding Complete — Watermark Invisible &amp; Protected</span>
+    </div>
+    <div class="result-body">
+      <p style="font-size:13px;color:var(--dim);margin-bottom:16px;">
+      ran successfully on the server. Download the watermarked file below.
+      </p>
+      <a id="embed-dl-link" class="dl-btn" style="display:none" download>
+        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+        Download Watermarked Audio
+      </a>
+      <div class="analysis-frame" id="analysis-frame" style="display:none;">
+        <img id="analysis-img" class="analysis-img" src="" alt="Watermark analysis">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ EXTRACT TAB ══ -->
+<div id="extract-section" class="section">
+  <div class="card">
+    <div class="card-head"><span class="card-num">01</span><span class="card-title">Upload Watermarked Audio</span></div>
+    <div class="card-body">
+      <div class="drop-zone" id="wm-drop" ondragover="handleDrag(event)" ondragleave="handleDragLeave(event,'wm-drop')" ondrop="handleDrop(event,'wm-input','wm-drop')">
+        <input type="file" id="wm-input" accept=".mp3,.wav" onchange="handleExtractFile(this)">
+        <svg class="drop-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+        <p class="drop-label">Drop watermarked audio here</p>
+        <p class="drop-hint">MP3 or WAV</p>
+        <div id="wm-name" class="file-name"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-head"><span class="card-num">02</span><span class="card-title">Enter Password</span></div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div class="field"><label>Decryption Password</label><input type="password" id="extract-pass" placeholder="Same password used at embedding" autocomplete="current-password"></div>
+        <div class="field"><label>Output Logo Filename</label><input type="text" id="extract-out" value="recovered_logo.png" placeholder="recovered.png"></div>
+      </div>
+      <div class="grid-2" style="margin-top:16px;">
+        <div class="field"><label>Reconstructed Audio Filename</label><input type="text" id="extract-orig-out" value="original_reconstructed.wav" placeholder="original_reconstructed.wav"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="run-wrap">
+    <button class="run-btn" id="extract-btn" onclick="runExtract()">
+      <svg class="btn-icon" id="extract-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z"/></svg>
+      Extract Watermark
+    </button>
+  </div>
+
+  <div class="progress-wrap" id="extract-progress">
+    <div class="progress-track"><div class="progress-bar" id="extract-bar"></div></div>
+    <div class="progress-label" id="extract-progress-label">Sending to Python backend…</div>
+  </div>
+  <div class="log-wrap" id="extract-log-wrap">
+    <div class="log-header"><span class="log-title">Process Log</span><div class="log-dots"><div class="log-dot"></div><div class="log-dot"></div><div class="log-dot"></div></div></div>
+    <div class="log-box" id="extract-log"></div>
+  </div>
+
+  <div class="result-card" id="extract-result">
+    <div class="result-head">
+      <svg class="result-head-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+      <span>Watermark Extracted Successfully</span>
+    </div>
+    <div class="result-body">
+      <div class="extracted-logo-wrap">
+        <div>
+          <div class="extracted-logo-frame"><img id="extracted-img" src="" alt="Recovered logo" style="min-width:64px;min-height:64px;"></div>
+          <a id="extract-dl-link" class="dl-btn" style="display:inline-flex;margin-top:12px;" download>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            Download Recovered Logo
+          </a>
+        </div>
+        <div id="extract-audio-wrap" style="display:none;">
+          <p style="font-family:'DM Mono',monospace;font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--dim);margin-bottom:10px;">Reconstructed Original Audio</p>
+          <audio id="extract-audio-player" controls style="display:block;width:100%;max-width:340px;margin-bottom:12px;border-radius:var(--r);"></audio>
+          <a id="extract-audio-dl-link" class="dl-btn" style="display:inline-flex;" download>
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/></svg>
+            Download Reconstructed Audio
+          </a>
+        </div>
+        <p id="extract-note" style="font-size:13px;color:var(--dim);line-height:1.7;flex:1;min-width:200px;"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+</main>
+
+<footer>
+  <span class="footer-copy">AudioMark · embed.py + extract.py · Flask backend</span>
+  <div class="footer-tech">
+    <span class="footer-pill">db4 Wavelet</span>
+    <span class="footer-pill">Reed-Solomon</span>
+    <span class="footer-pill">ChaCha20</span>
+    <span class="footer-pill">PBKDF2</span>
+  </div>
+</footer>
+
+<script>
+"use strict";
+
+const API = "";   // same origin — Flask serves this HTML at http://localhost:5000
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let embedFiles   = { wav: null, logo: null };
+let extractFiles = { wm: null };
+
+// ── Server health check ───────────────────────────────────────────────────────
+async function checkServer() {
+  const el   = document.getElementById("server-status");
+  const text = document.getElementById("status-text");
+  try {
+    const r = await fetch(API + "/health", { signal: AbortSignal.timeout(3000) });
+    if (r.ok) {
+      el.className   = "server-status online";
+      text.textContent = "Python backend online";
+    } else { throw new Error(); }
+  } catch {
+    el.className   = "server-status offline";
+    text.textContent = "Backend offline — run app.py";
+  }
+}
+checkServer();
+setInterval(checkServer, 10000);
+
+// ── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(tab) {
+  document.querySelectorAll(".tab-btn").forEach((b, i) =>
+    b.classList.toggle("active",
+      (tab==="embed"&&i===0)||(tab==="extract"&&i===1)||(tab==="setup"&&i===2)));
+  ["embed","extract","setup"].forEach(t =>
+    document.getElementById(t+"-section").classList.toggle("active", t===tab));
+}
+
+// ── Size selector ─────────────────────────────────────────────────────────────
+function selectSize(w, h, el) {
+  document.querySelectorAll(".size-opt").forEach(e => e.classList.remove("selected"));
+  el.classList.add("selected");
+  document.getElementById("logo-w").value = w;
+  document.getElementById("logo-h").value = h;
+}
+
+// ── Drag-and-drop ─────────────────────────────────────────────────────────────
+function handleDrag(e) { e.preventDefault(); e.currentTarget.classList.add("drag-over"); }
+function handleDragLeave(e, id) { document.getElementById(id).classList.remove("drag-over"); }
+function handleDrop(e, inputId, dropId) {
+  e.preventDefault();
+  document.getElementById(dropId).classList.remove("drag-over");
+  const file = e.dataTransfer.files[0]; if (!file) return;
+  const inp  = document.getElementById(inputId);
+  const dt   = new DataTransfer(); dt.items.add(file); inp.files = dt.files;
+  inp.dispatchEvent(new Event("change"));
+}
+
+// ── File handlers ─────────────────────────────────────────────────────────────
+function handleWavFile(input) {
+  const file = input.files[0]; if (!file) return;
+  embedFiles.wav = file;
+  document.getElementById("wav-name").textContent = file.name + "  (" + (file.size/1024).toFixed(1) + " KB)";
+  drawWaveform(file);
+}
+function handleLogoFile(input) {
+  const file = input.files[0]; if (!file) return;
+  embedFiles.logo = file;
+  document.getElementById("logo-name").textContent = file.name;
+  const p = document.getElementById("logo-preview");
+  p.src = URL.createObjectURL(file); p.style.display = "block";
+}
+function handleExtractFile(input) {
+  const file = input.files[0]; if (!file) return;
+  extractFiles.wm = file;
+  document.getElementById("wm-name").textContent = file.name + "  (" + (file.size/1024).toFixed(1) + " KB)";
+}
+
+// ── Waveform visualiser ───────────────────────────────────────────────────────
+function drawWaveform(file) {
+  const canvas = document.getElementById("waveform");
+  canvas.style.display = "block";
+  const reader = new FileReader();
+  reader.onload = async e => {
+    try {
+      const ac  = new (window.AudioContext || window.webkitAudioContext)();
+      const buf = await ac.decodeAudioData(e.target.result); ac.close();
+      const data = buf.getChannelData(0);
+      const W = (canvas.offsetWidth || 600) * devicePixelRatio;
+      const H = 50 * devicePixelRatio;
+      canvas.width = W; canvas.height = H;
+      const ctx = canvas.getContext("2d");
+      ctx.fillStyle = "#1a1a1a"; ctx.fillRect(0, 0, W, H);
+      const step = Math.ceil(data.length / W), mid = H / 2;
+      ctx.strokeStyle = "#b8924a"; ctx.lineWidth = 1; ctx.beginPath();
+      for (let i = 0; i < W; i++) {
+        let mn = 1, mx = -1;
+        for (let j = 0; j < step; j++) { const d = data[i*step+j]||0; if(d<mn)mn=d; if(d>mx)mx=d; }
+        ctx.moveTo(i, mid+mn*mid*0.9); ctx.lineTo(i, mid+mx*mid*0.9);
+      }
+      ctx.stroke();
+    } catch(err) {}
+  };
+  reader.readAsArrayBuffer(file);
+}
+
+// ── Log helpers ───────────────────────────────────────────────────────────────
+function uiLog(boxId, text, type = "") {
+  const box  = document.getElementById(boxId);
+  const line = document.createElement("span");
+  line.className   = "log-line" + (type ? " log-" + type : "");
+  line.textContent = text;
+  box.appendChild(line);
+  box.appendChild(document.createElement("br"));
+  box.scrollTop = box.scrollHeight;
+}
+function clearLog(id) { document.getElementById(id).innerHTML = ""; }
+function setProgress(prefix, pct, label) {
+  document.getElementById(prefix + "-bar").style.width = pct + "%";
+  document.getElementById(prefix + "-progress-label").textContent = label;
+}
+
+// ── Animated progress (indeterminate while Python runs) ──────────────────────
+function startIndeterminate(prefix) {
+  let pct = 0;
+  const id = setInterval(() => {
+    pct = Math.min(pct + (pct < 60 ? 3 : pct < 85 ? 1 : 0.3), 90);
+    document.getElementById(prefix + "-bar").style.width = pct + "%";
+  }, 400);
+  return id;
+}
+
+// ── runEmbed: POST to /embed, which calls embed.embed() ────────────────────
+async function runEmbed() {
+  if (!embedFiles.wav)  { alert("Please upload a WAV audio file."); return; }
+  if (!embedFiles.logo) { alert("Please upload a logo image."); return; }
+  const pass = document.getElementById("embed-pass").value.trim();
+  if (!pass)  { alert("Please enter an encryption password."); return; }
+
+  const outName = document.getElementById("embed-out").value.trim() || "watermarked.mp3";
+  const logo_w  = document.getElementById("logo-w").value;
+  const logo_h  = document.getElementById("logo-h").value;
+
+  const btn  = document.getElementById("embed-btn");
+  const icon = document.getElementById("embed-icon");
+  btn.disabled = true; icon.classList.add("spinning");
+  document.getElementById("embed-progress").style.display  = "block";
+  document.getElementById("embed-log-wrap").style.display  = "block";
+  document.getElementById("embed-result").style.display    = "none";
+  clearLog("embed-log");
+  setProgress("embed", 0, "Uploading files to Python backend…");
+
+  uiLog("embed-log", "Sending files to app.py…", "info");
+  uiLog("embed-log", `  audio    : ${embedFiles.wav.name}  (${(embedFiles.wav.size/1024).toFixed(1)} KB)`, "dim");
+  uiLog("embed-log", `  logo     : ${embedFiles.logo.name}`, "dim");
+  uiLog("embed-log", `  size     : ${logo_w}×${logo_h}`, "dim");
+  uiLog("embed-log", `  output   : ${outName}`, "dim");
+  uiLog("embed-log", "", "");
+  uiLog("embed-log", "▶  app.py → embed.embed() running…", "info");
+
+  const timer = startIndeterminate("embed");
+  setProgress("embed", 5, "Python embed.py running…");
+
+  try {
+    const fd = new FormData();
+    fd.append("audio",    embedFiles.wav);
+    fd.append("logo",     embedFiles.logo);
+    fd.append("password", pass);
+    fd.append("logo_w",   logo_w);
+    fd.append("logo_h",   logo_h);
+    fd.append("output",   outName);
+
+    const res = await fetch(API + "/embed", { method: "POST", body: fd });
+
+    clearInterval(timer);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
+    }
+
+    // Parse JSON response with audio and analysis
+    setProgress("embed", 100, "Complete");
+    const result = await res.json();
+
+    // Extract audio blob from base64
+    const audioBase64 = result.audio_base64;
+    const audioBlob   = new Blob([Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0))], 
+                                 { type: result.audio_mime });
+    const audioUrl    = URL.createObjectURL(audioBlob);
+    const finalName   = result.audio_filename || outName;
+
+    uiLog("embed-log", "", "");
+    uiLog("embed-log", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", "dim");
+    uiLog("embed-log", "  ✓  embed.py completed successfully", "ok");
+    uiLog("embed-log", `  ✓  Output: ${finalName}  (${(audioBlob.size/1024).toFixed(0)} KB)`, "ok");
+    if (result.analysis_base64) {
+      uiLog("embed-log", "  ✓  Analysis visualization generated", "ok");
+    }
+    uiLog("embed-log", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", "dim");
+
+    document.getElementById("embed-result").style.display = "block";
+    const dl = document.getElementById("embed-dl-link");
+    dl.style.display = "inline-flex";
+    dl.href          = audioUrl;
+    dl.download      = finalName;
+
+    // Display analysis image if available
+    if (result.analysis_base64) {
+      const analysisImg = document.getElementById("analysis-img");
+      const analysisFrame = document.getElementById("analysis-frame");
+      analysisImg.src = "data:image/png;base64," + result.analysis_base64;
+      analysisFrame.style.display = "block";
+    }
+
+  } catch (err) {
+    clearInterval(timer);
+    setProgress("embed", 0, "Error");
+    uiLog("embed-log", "", "");
+    uiLog("embed-log", "  ✗  " + err.message, "err");
+    if (err.message.includes("fetch") || err.message.includes("Failed")) {
+      uiLog("embed-log", "  ⚠  Cannot reach backend — is app.py running?", "err");
+      uiLog("embed-log", "     Run: python app.py", "dim");
+    }
+  } finally {
+    btn.disabled = false; icon.classList.remove("spinning");
+  }
+}
+
+// ── runExtract: POST to /extract, which calls extract.extract() ─────────────
+async function runExtract() {
+  if (!extractFiles.wm) { alert("Please upload a watermarked audio file."); return; }
+  const pass = document.getElementById("extract-pass").value.trim();
+  if (!pass)  { alert("Please enter the decryption password."); return; }
+
+  const outName     = document.getElementById("extract-out").value.trim()      || "recovered_logo.png";
+  const origOutName = document.getElementById("extract-orig-out").value.trim() || "original_reconstructed.wav";
+
+  const btn  = document.getElementById("extract-btn");
+  const icon = document.getElementById("extract-icon");
+  btn.disabled = true; icon.classList.add("spinning");
+  document.getElementById("extract-progress").style.display  = "block";
+  document.getElementById("extract-log-wrap").style.display  = "block";
+  document.getElementById("extract-result").style.display    = "none";
+  document.getElementById("extract-audio-wrap").style.display = "none";
+  clearLog("extract-log");
+  setProgress("extract", 0, "Uploading to Python backend…");
+
+  uiLog("extract-log", "Sending file to app.py…", "info");
+  uiLog("extract-log", `  audio  : ${extractFiles.wm.name}  (${(extractFiles.wm.size/1024).toFixed(1)} KB)`, "dim");
+  uiLog("extract-log", `  output : ${outName}`, "dim");
+  uiLog("extract-log", `  orig   : ${origOutName}`, "dim");
+  uiLog("extract-log", "", "");
+  uiLog("extract-log", "▶  app.py → extract.extract() running…", "info");
+
+  const timer = startIndeterminate("extract");
+  setProgress("extract", 5, "Python extract.py running…");
+
+  try {
+    const fd = new FormData();
+    fd.append("audio",       extractFiles.wm);
+    fd.append("password",    pass);
+    fd.append("output",      outName);
+    fd.append("orig_output", origOutName);
+
+    const res = await fetch(API + "/extract", { method: "POST", body: fd });
+
+    clearInterval(timer);
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || res.statusText);
+    }
+
+    const result = await res.json();
+    if (!result.success) throw new Error(result.error || "Unknown error");
+
+    setProgress("extract", 100, "Complete");
+
+    // ── Logo ──────────────────────────────────────────────────────
+    const logoBlob = _b64toBlob(result.logo_base64, result.logo_mime);
+    const logoUrl  = URL.createObjectURL(logoBlob);
+    const finalLogoName = result.logo_filename || outName;
+
+    uiLog("extract-log", "", "");
+    uiLog("extract-log", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", "dim");
+    uiLog("extract-log", "  ✓  extract.py completed successfully", "ok");
+    uiLog("extract-log", `  ✓  Logo recovered: ${finalLogoName}  (${(logoBlob.size/1024).toFixed(1)} KB)`, "ok");
+
+    document.getElementById("extract-result").style.display = "block";
+    const imgEl = document.getElementById("extracted-img");
+    imgEl.src = logoUrl;
+    imgEl.style.maxWidth = "200px";
+
+    const dl = document.getElementById("extract-dl-link");
+    dl.href = logoUrl; dl.download = finalLogoName;
+
+    // ── Reconstructed original audio ──────────────────────────────
+    if (result.audio_base64) {
+      const audioBlob      = _b64toBlob(result.audio_base64, result.audio_mime);
+      const audioUrl       = URL.createObjectURL(audioBlob);
+      const finalAudioName = result.audio_filename || origOutName;
+
+      const player = document.getElementById("extract-audio-player");
+      player.src  = audioUrl;
+      player.type = result.audio_mime;
+
+      const audioDl = document.getElementById("extract-audio-dl-link");
+      audioDl.href     = audioUrl;
+      audioDl.download = finalAudioName;
+
+      document.getElementById("extract-audio-wrap").style.display = "block";
+
+      uiLog("extract-log", `  ✓  Reconstructed audio: ${finalAudioName}  (${(audioBlob.size/1024).toFixed(1)} KB)`, "ok");
+    }
+
+    uiLog("extract-log", "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━", "dim");
+
+    document.getElementById("extract-note").textContent =
+      "extract.py decrypted and reconstructed the logo from the audio's DWT coefficients. " +
+      "The original audio has been reconstructed by removing the embedded QIM perturbations.";
+
+  } catch (err) {
+    clearInterval(timer);
+    setProgress("extract", 0, "Error");
+    uiLog("extract-log", "", "");
+    uiLog("extract-log", "  ✗  " + err.message, "err");
+    if (err.message.includes("fetch") || err.message.includes("Failed")) {
+      uiLog("extract-log", "  ⚠  Cannot reach backend — is app.py running?", "err");
+      uiLog("extract-log", "     Run: python app.py", "dim");
+    }
+  } finally {
+    btn.disabled = false; icon.classList.remove("spinning");
+  }
+}
+
+// ── base64 → Blob helper ──────────────────────────────────────────────────────
+function _b64toBlob(b64, mime) {
+  const bin  = atob(b64);
+  const buf  = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
+  return new Blob([buf], { type: mime });
+}
+</script>
+</body>
+</html>
