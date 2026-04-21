@@ -175,7 +175,10 @@ def rs_encode(data: bytes) -> bytes:
     codec = reedsolo.RSCodec(RS_NSYM)
     out   = bytearray()
     for i in range(0, len(data), RS_DATA):
-        out.extend(codec.encode(data[i: i + RS_DATA]))
+        chunk = data[i: i + RS_DATA]
+        if len(chunk) < RS_DATA:          # pad last block so it is always RS_DATA bytes
+            chunk = chunk + b'\x00' * (RS_DATA - len(chunk))
+        out.extend(codec.encode(chunk))
     return bytes(out)
 
 
